@@ -32,7 +32,7 @@ def _18art_announcement_catch():
     response = session.get(url=f"https://info.18art.art/html/infor/infor.html?sub=0&v={request_time}")
     if response.status_code != 200:
         return {"state": False, "data": {}, "msg": "http request status != 200"}
-    content_str = response.content.decode(response.encoding)
+    content_str = response.content.decode()
     try:
         soup = BeautifulSoup(content_str, "html.parser")
         scripts = soup.find_all("script")

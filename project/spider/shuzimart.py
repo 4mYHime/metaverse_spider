@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 "is_recycle": 0,
                 "is_delete": 0,
                 "store_user_id": 10001,
-                "file_path": "https://h5.shuzimart.com/uploads/20221014114803278238460.png"
+                "file_path": " "
             },
             "category": {
                 "category_id": 1,

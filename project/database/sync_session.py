@@ -1,7 +1,3 @@
-import json
-import logging.config
-import logging.config
-import os
 from contextlib import contextmanager
 from typing import Generator
 
@@ -10,7 +6,8 @@ from sqlalchemy.orm import sessionmaker
 
 
 try:
-    configure = json.loads(os.environ.get('metaverse_spider_envfile'))
+    # configure = json.loads(os.environ.get('metaverse_spider_envfile'))
+    from setting.settings import configure
     MYSQL_DIALECT = configure['mysql']['dialect']
     SYNC_MYSQL_DRIVER = configure['mysql']['sync_driver']
     MYSQL_USERNAME = configure['mysql']['username']

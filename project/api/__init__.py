@@ -1,5 +1,8 @@
+import datetime
 import json
+import logging
 import os
+from typing import List
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError, ValidationError
@@ -8,8 +11,11 @@ from starlette.middleware.cors import CORSMiddleware
 from api.api_v1.api import api_v1_router
 from api.utils import response_code
 from api.utils.custom_exception import PostParamsError, UserTokenError, UserNotFound, GetParamsError
-from database.async_session import get_redis_pool
+from database.models import Announcement18Art, Announcement42verse, AnnouncementIbox, AnnouncementLingjingsj, \
+    AnnouncementShuzimart, AnnouncementTheone
+from database.sync_session import get_dbs
 from setting import settings
+from spider import *
 
 
 def create_app() -> FastAPI:
@@ -57,24 +63,6 @@ def create_app_with_task() -> FastAPI:
     register_configure(app)
 
     return app
-
-
-def register_redis(app: FastAPI) -> None:
-    """
-        把redis挂载到app对象上面
-        :param app:
-        :return:
-    """
-
-    @app.on_event('startup')
-    async def startup_event():
-        app.state.redis = await get_redis_pool()
-
-    @app.on_event('shutdown')
-    async def shutdown_event():
-        app.state.redis.close()
-        await app.state.redis.wait_closed()
-
 
 def register_router(app: FastAPI) -> None:
     """
@@ -215,11 +203,19 @@ def register_middleware(app: FastAPI) -> None:
 def register_cron(app: FastAPI) -> None:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
+    # cron 定时 hour/minute/second
+    # interval 间隔
+    # 每5分钟 自动抓取最新数据并更新
 
+    scheduler.add_job(spider_18art, 'cron', minute="*/5")
+    scheduler.add_job(spider_42verse, 'cron', minute="*/5")
+    scheduler.add_job(spider_ibox, 'cron', minute="*/5")
+    scheduler.add_job(spider_lingjingsj, 'cron', minute="*/5")
+    scheduler.add_job(spider_shuzimart, 'cron', minute="*/5")
+    scheduler.add_job(spider_theone, 'cron', minute="*/5")
     try:
         scheduler.start()
     except Exception as e:
-        # print(e)
         scheduler.shutdown()
 
 
@@ -233,6 +229,300 @@ def register_configure(app: FastAPI) -> None:
     @app.on_event('startup')
     async def startup_event():
         try:
-            app.state.configure = json.loads(os.environ.get('metaverse_spider_envfile'))
+            from setting.settings import configure
+            app.state.configure = configure
+            # app.state.configure = json.loads(os.environ.get('metaverse_spider_envfile'))
         except Exception as e:
             raise Exception("请检查环境配置是否正确")
+
+
+def spider_18art():
+    # 执行一次抓取各平台最新数据A
+    # A与数据库内容B进行比对
+    # 将新的保存至数据库
+    with get_dbs() as session:
+        content = _18art_announcement_catch()
+        if not content['state']:
+            logging.warning(f"time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            f"platform: 18art"
+                            f"message: {content['msg']}")
+        else:
+            content_ids = []
+            for i in content['data']['noticeList']:
+                for j in i['list']:
+                    try:
+                        if j['id'] and isinstance(j['id'], int):
+                            content_ids.append(j['id'])
+                    except Exception as e:
+                        continue
+            content_18art_ids = list(set(content_ids))
+            db_ids: List[Announcement18Art.id] = session.query(Announcement18Art.id).filter(
+                Announcement18Art.is_delete == 0
+            ).all()
+            if len(content_18art_ids) > len(db_ids):
+                new_content_ids = list(
+                    set(content_18art_ids).difference(set(db_ids))
+                )
+                for new_id in new_content_ids:
+                    for i in content['data']['noticeList']:
+                        for j in i['list']:
+                            if j['id'] == new_id:
+                                try:
+                                    session.add(
+                                        Announcement18Art(
+                                            id=j['id'],
+                                            type=j['classId'],
+                                            type_name=j['className'],
+                                            title=j['title'],
+                                            cover="https://file.18art.art" + j['coverImg'],
+                                            content=j,
+                                            content_type="object",
+                                            create_time=datetime.datetime.fromtimestamp(j['time'] / 1000)
+                                        )
+                                    )
+                                except Exception as e:
+                                    continue
+
+
+def spider_42verse():
+    # 执行一次抓取各平台最新数据A
+    # A与数据库内容B进行比对
+    # 将新的保存至数据库
+    with get_dbs() as session:
+        content = _42verse_announcement_catch()
+        if not content['state']:
+            logging.warning(f"time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            f"platform: 42verse"
+                            f"message: {content['msg']}")
+        else:
+            content_ids = []
+            content_data = []
+            for i in content['data'].values():
+                for j in i:
+                    content_data.append(j)
+            content['data'] = content_data
+            for i in content['data']:
+                try:
+                    if i['id'] and isinstance(i['id'], int):
+                        content_ids.append(i['id'])
+                except Exception as e:
+                    continue
+            content_42verse_ids = list(set(content_ids))
+            db_ids: List[Announcement42verse.id] = session.query(Announcement42verse.id).filter(
+                Announcement42verse.is_delete == 0
+            ).all()
+            if len(content_42verse_ids) > len(db_ids):
+                new_content_ids = list(
+                    set(content_42verse_ids).difference(set(db_ids))
+                )
+                for new_id in new_content_ids:
+                    for j in content['data']:
+                        if j['id'] == new_id:
+                            try:
+                                session.add(
+                                    Announcement42verse(
+                                        id=j['id'],
+                                        type_name=j['title'].split('｜')[0],
+                                        title=j['title'],
+                                        content=j,
+                                        content_type="object",
+                                        create_time=datetime.datetime.strptime(j["createTime"], "%Y-%m-%d")
+                                    )
+                                )
+                            except Exception as e:
+                                continue
+
+
+def spider_ibox():
+    # 执行一次抓取各平台最新数据A
+    # A与数据库内容B进行比对
+    # 将新的保存至数据库
+    with get_dbs() as session:
+        content = _ibox_announcement_catch()
+        if not content['state']:
+            logging.warning(f"time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            f"platform: ibox"
+                            f"message: {content['msg']}")
+        else:
+            content_ids = []
+            content_data = []
+            for i in content['data']['allList']:
+                try:
+                    if i['id'] and isinstance(i['id'], int):
+                        content_ids.append(i['id'])
+                except Exception as e:
+                    continue
+            content_ibox_ids = list(set(content_ids))
+            db_ids: List[AnnouncementIbox.id] = session.query(AnnouncementIbox.id).filter(
+                AnnouncementIbox.is_delete == 0
+            ).all()
+            if len(content_ibox_ids) > len(db_ids):
+                new_content_ids = list(
+                    set(content_ibox_ids).difference(set(db_ids))
+                )
+                for new_id in new_content_ids:
+                    for j in content['data']['allList']:
+                        if j['id'] == new_id:
+                            try:
+                                session.add(
+                                    AnnouncementIbox(
+                                        id=j['id'],
+                                        type=j['noticeClassId'],
+                                        type_name=j['className'],
+                                        title=j['noticeName'],
+                                        content=j,
+                                        content_type="object",
+                                        create_time=datetime.datetime.fromtimestamp(j['noticeTime'] / 1000)
+                                    )
+                                )
+                            except Exception as e:
+                                continue
+
+
+def spider_lingjingsj():
+    # 执行一次抓取各平台最新数据A
+    # A与数据库内容B进行比对
+    # 将新的保存至数据库
+    with get_dbs() as session:
+        content = _lingjingsj_announcement_catch()
+        if not content['state']:
+            logging.warning(f"time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            f"platform: lingjingsj"
+                            f"message: {content['msg']}")
+        else:
+            content_ids = []
+            content_data = []
+            for i in content['data'].values():
+                for j in i:
+                    content_data.append(j)
+            content['data'] = content_data
+            for i in content['data']:
+                try:
+                    if i['id'] and isinstance(i['id'], int):
+                        content_ids.append(i['id'])
+                except Exception as e:
+                    continue
+            content_ids = list(set(content_ids))
+            db_ids: List[AnnouncementLingjingsj.id] = session.query(AnnouncementLingjingsj.id).filter(
+                AnnouncementLingjingsj.is_delete == 0
+            ).all()
+            if len(content_ids) > len(db_ids):
+                new_content_ids = list(
+                    set(content_ids).difference(set(db_ids))
+                )
+                for new_id in new_content_ids:
+                    for j in content['data']:
+                        if j['id'] == new_id:
+                            try:
+                                session.add(
+                                    AnnouncementLingjingsj(
+                                        id=j['id'],
+                                        type_name=j['tag'],
+                                        title=j['title'],
+                                        content=j,
+                                        content_type="object",
+                                        create_time=datetime.datetime.strptime(j["create_time"], "%Y-%m-%d %H:%M:%S")
+                                    )
+                                )
+                            except Exception as e:
+                                continue
+
+
+def spider_shuzimart():
+    # 执行一次抓取各平台最新数据A
+    # A与数据库内容B进行比对
+    # 将新的保存至数据库
+    with get_dbs() as session:
+        content = _shuzimart_announcement_catch()
+        if not content['state']:
+            logging.warning(f"time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            f"platform: shuzimart"
+                            f"message: {content['msg']}")
+        else:
+            content_ids = []
+            content_data = []
+            for i in content['data'].values():
+                for j in i:
+                    content_data.append(j)
+            content['data'] = content_data
+            for i in content['data']:
+                try:
+                    if i['article_id'] and isinstance(i['article_id'], int):
+                        content_ids.append(i['article_id'])
+                except Exception as e:
+                    continue
+            content_ids = list(set(content_ids))
+            db_ids: List[AnnouncementShuzimart.id] = session.query(AnnouncementShuzimart.id).filter(
+                AnnouncementShuzimart.is_delete == 0
+            ).all()
+            if len(content_ids) > len(db_ids):
+                new_content_ids = list(
+                    set(content_ids).difference(set(db_ids))
+                )
+                for new_id in new_content_ids:
+                    for j in content['data']:
+                        if j['article_id'] == new_id:
+                            try:
+                                session.add(
+                                    AnnouncementShuzimart(
+                                        id=j['article_id'],
+                                        type=j['category_id'],
+                                        type_name=j['category']['name'],
+                                        title=j['article_title'],
+                                        content=j,
+                                        content_type="object",
+                                        create_time=datetime.datetime.strptime(j["view_time"], "%Y-%m-%d")
+                                    )
+                                )
+                            except Exception as e:
+                                continue
+
+
+def spider_theone():
+    # 执行一次抓取各平台最新数据A
+    # A与数据库内容B进行比对
+    # 将新的保存至数据库
+    with get_dbs() as session:
+        content = _theone_announcement_catch()
+        if not content['state']:
+            logging.warning(f"time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            f"platform: theone"
+                            f"message: {content['msg']}")
+        else:
+            content_ids = []
+            content_data = []
+            for i in content['data'].values():
+                for j in i:
+                    content_data.append(j)
+            content['data'] = content_data
+            for i in content['data']:
+                try:
+                    if i['uuid'] and isinstance(i['uuid'], str):
+                        content_ids.append(i['uuid'])
+                except Exception as e:
+                    continue
+            content_ids = list(set(content_ids))
+            db_ids: List[AnnouncementTheone.id] = session.query(AnnouncementTheone.id).filter(
+                AnnouncementTheone.is_delete == 0
+            ).all()
+            if len(content_ids) > len(db_ids):
+                new_content_ids = list(
+                    set(content_ids).difference(set(db_ids))
+                )
+                for new_id in new_content_ids:
+                    for j in content['data']:
+                        if j['uuid'] == new_id:
+                            try:
+                                session.add(
+                                    AnnouncementTheone(
+                                        id=j['uuid'],
+                                        type_name='平台通知',
+                                        title=j['name'],
+                                        cover=j['cover'],
+                                        content=j,
+                                        content_type="object",
+                                        create_time=datetime.datetime.strptime(j["releaseTime"], "%Y/%m/%d %H:%M:%S")
+                                    )
+                                )
+                            except Exception as e:
+                                continue

@@ -1,14 +1,10 @@
-import json
-import logging.config
-import logging.config
-import os
-
-from aioredis import create_redis_pool, Redis
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 try:
-    configure = json.loads(os.environ.get('metaverse_spider_envfile'))
+    from setting.settings import configure
+
+    # configure = json.loads(os.environ.get('metaverse_spider_envfile'))
     MYSQL_DIALECT = configure['mysql']['dialect']
     ASYNC_MYSQL_DRIVER = configure['mysql']['async_driver']
     MYSQL_USERNAME = configure['mysql']['username']
@@ -16,12 +12,6 @@ try:
     MYSQL_HOST = configure['mysql']['host']
     MYSQL_PORT = configure['mysql']['port']
     MYSQL_DATABASE = configure['mysql']['database']
-
-    REDIS_PASSWORD = configure['redis']['password']
-    REDIS_HOST = configure['redis']['host']
-    REDIS_PORT = configure['redis']['port']
-    REDIS_DB = configure['redis']['redis_db']
-    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}?encoding=utf-8"
 except Exception as e:
     raise Exception("请检查环境配置是否正确")
 
@@ -46,8 +36,3 @@ async_session_local = sessionmaker(
 async def db_session() -> AsyncSession:
     async with async_session_local() as session:
         yield session
-
-
-async def get_redis_pool() -> Redis:
-    redis = await create_redis_pool(REDIS_URL)
-    return redis

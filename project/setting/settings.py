@@ -14,3 +14,16 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+configure = {
+    "mysql": {
+        "dialect": "mysql",
+        "async_driver": "aiomysql",
+        "sync_driver": "pymysql",
+        "username": "announcement",
+        "password": "FnEPE5tAN62a2hzs",
+        "host": "47.113.95.184",
+        "port": 3306,
+        "database": "announcement"
+    }
+}
