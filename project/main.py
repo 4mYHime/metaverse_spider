@@ -5,4 +5,4 @@ app = create_app()
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(app="main:app", host="0.0.0.0", port=20018, reload=True, debug=True, workers=2, log_level="debug")
+    uvicorn.run(app="main:app", host="0.0.0.0", port=20018, reload=True, workers=2, log_level="debug")
