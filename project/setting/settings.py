@@ -22,7 +22,7 @@ configure = {
         "sync_driver": "pymysql",
         "username": "announcement",
         "password": "FnEPE5tAN62a2hzs",
-        "host": "127.0.0.1",
+        "host": "47.113.95.184",
         "port": 3306,
         "database": "announcement"
     }
