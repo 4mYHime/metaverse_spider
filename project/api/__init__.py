@@ -251,7 +251,7 @@ def spider_18art():
             for i in content['data']['noticeList']:
                 for j in i['list']:
                     try:
-                        if j['id'] and isinstance(j['id'], int):
+                        if j['id'] and isinstance(j['id'], str):
                             content_ids.append(j['id'])
                     except Exception as e:
                         continue

@@ -13,7 +13,7 @@ class Announcement18Art(Base):
         {'comment': '公告-18art'}
     )
 
-    id = Column(BIGINT, primary_key=True)
+    id = Column(VARCHAR(512), primary_key=True)
     type = Column(TINYINT, nullable=False, comment="公告类型")
     type_name = Column(VARCHAR(512), nullable=False, comment="公告类型名称")
     title = Column(VARCHAR(512), nullable=False, comment="公告标题")
