@@ -31,7 +31,7 @@ def _theone_announcement_catch():
 
     if response.status_code != 200:
         return {"state": False, "data": {}, "msg": "http request status != 200"}
-    content_str = response.content.decode(response.encoding)
+    content_str = response.content.decode('utf-8')
     try:
         content = json.loads(content_str)
     except Exception as e:
