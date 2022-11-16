@@ -256,12 +256,12 @@ def spider_18art():
                     except Exception as e:
                         continue
             content_18art_ids = list(set(content_ids))
-            db_ids: List[Announcement18Art.id] = session.query(Announcement18Art.id).filter(
+            db_ids: List[Announcement18Art] = session.query(Announcement18Art.id).filter(
                 Announcement18Art.is_delete == 0
             ).all()
             if len(content_18art_ids) > len(db_ids):
                 new_content_ids = list(
-                    set(content_18art_ids).difference(set(db_ids))
+                    set(content_18art_ids).difference(set([_id.id for _id in db_ids]))
                 )
                 for new_id in new_content_ids:
                     for i in content['data']['noticeList']:
@@ -308,12 +308,12 @@ def spider_42verse():
                 except Exception as e:
                     continue
             content_42verse_ids = list(set(content_ids))
-            db_ids: List[Announcement42verse.id] = session.query(Announcement42verse.id).filter(
+            db_ids: List[Announcement42verse] = session.query(Announcement42verse.id).filter(
                 Announcement42verse.is_delete == 0
             ).all()
             if len(content_42verse_ids) > len(db_ids):
                 new_content_ids = list(
-                    set(content_42verse_ids).difference(set(db_ids))
+                    set(content_42verse_ids).difference(set([_id.id for _id in db_ids]))
                 )
                 for new_id in new_content_ids:
                     for j in content['data']:
@@ -353,12 +353,12 @@ def spider_ibox():
                 except Exception as e:
                     continue
             content_ibox_ids = list(set(content_ids))
-            db_ids: List[AnnouncementIbox.id] = session.query(AnnouncementIbox.id).filter(
+            db_ids: List[AnnouncementIbox] = session.query(AnnouncementIbox.id).filter(
                 AnnouncementIbox.is_delete == 0
             ).all()
             if len(content_ibox_ids) > len(db_ids):
                 new_content_ids = list(
-                    set(content_ibox_ids).difference(set(db_ids))
+                    set(content_ibox_ids).difference(set([_id.id for _id in db_ids]))
                 )
                 for new_id in new_content_ids:
                     for j in content['data']['allList']:
@@ -403,12 +403,12 @@ def spider_lingjingsj():
                 except Exception as e:
                     continue
             content_ids = list(set(content_ids))
-            db_ids: List[AnnouncementLingjingsj.id] = session.query(AnnouncementLingjingsj.id).filter(
+            db_ids: List[AnnouncementLingjingsj] = session.query(AnnouncementLingjingsj.id).filter(
                 AnnouncementLingjingsj.is_delete == 0
             ).all()
             if len(content_ids) > len(db_ids):
                 new_content_ids = list(
-                    set(content_ids).difference(set(db_ids))
+                    set(content_ids).difference(set([_id.id for _id in db_ids]))
                 )
                 for new_id in new_content_ids:
                     for j in content['data']:
@@ -452,12 +452,12 @@ def spider_shuzimart():
                 except Exception as e:
                     continue
             content_ids = list(set(content_ids))
-            db_ids: List[AnnouncementShuzimart.id] = session.query(AnnouncementShuzimart.id).filter(
+            db_ids: List[AnnouncementShuzimart] = session.query(AnnouncementShuzimart.id).filter(
                 AnnouncementShuzimart.is_delete == 0
             ).all()
             if len(content_ids) > len(db_ids):
                 new_content_ids = list(
-                    set(content_ids).difference(set(db_ids))
+                    set(content_ids).difference(set([_id.id for _id in db_ids]))
                 )
                 for new_id in new_content_ids:
                     for j in content['data']:
@@ -507,7 +507,7 @@ def spider_theone():
             ).all()
             if len(content_ids) > len(db_ids):
                 new_content_ids = list(
-                    set(content_ids).difference(set(db_ids))
+                    set(content_ids).difference(set([_id.id for _id in db_ids]))
                 )
                 for new_id in new_content_ids:
                     for j in content['data']:
